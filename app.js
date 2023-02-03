@@ -4,48 +4,42 @@ const multer = require('multer');
 const ejs = require('ejs');
 const path = require('path');
 const mongoose = require('mongoose');
-const { constants } = require('buffer');
+require('dotenv').config();
+const File = require('./model/fileSchema');
 
 
 
-const ImageSchema = new mongoose.Schema({
-    image:{
-        type: String,
-        required: true
-    }
-});
+app.set('view engine' , 'ejs');
+app.use(express.static('./public'));
 
-const Image = mongoose.model('image', ImageSchema)
 
 
 // Connect to mongodb
-mongoose.connect("mongodb://localhost:27017/uploadDB", {useNewURIParser:true, useUnifiedTopology: true})
+mongoose.connect(process.env.MongoURI, {useNewURIParser:true, useUnifiedTopology: true})
 .then(()=> console.log('Mongo Connected...'))
 .catch(err => console.log(err));
 
 let date = Date.now();        
 //set storage engine 
-const storage = multer.diskStorage({
+const Storage = multer.diskStorage({
     destination: './public/uploads/',
-    filename: function(req , file, cb){
+    filename: function(req, file, cb){
         cb(null, file.filename +'_' + date + "myfile101" + path.extname(file.originalname));
     }
 })
 
 //Initialize upload
 const upload = multer({
-    storage : storage,
-    limits:{fileSize :10000000},
+    storage: Storage,
     fileFilter:function(req,file,cb){
         checkFileType(file,cb)
     }
-}).single('myImage')
-
+}).single("image");
 //check file system
 
 function checkFileType(file, cb){
     //Allow extensions
-    const filetypes = /jpeg|jpg|png|gif|JPG|mp4/;
+    const filetypes = /jpeg|jpg|png|gif|JPG|pdf/;
     //check ext
     const extname = filetypes.test(path.extname 
     (file.originalname).toLowerCase());
@@ -59,10 +53,10 @@ function checkFileType(file, cb){
     }
 }
 
-app.set('view engine' , 'ejs');
-app.use(express.static('./public'));
 
-app.post('/upload', (req , res, next)=>{  
+
+// Upload File
+app.post('/upload', (req , res )=>{  
     
     upload(req, res,(err)=>{
         if(err){
@@ -80,28 +74,26 @@ app.post('/upload', (req , res, next)=>{
                     file: `uploads/${req.file.filename}`
                 })
                 const image= req.file.path
-                const Pictures = new Image({image});
-                Pictures.save(function(err){
-                    if(err){
-                        console.log(err)
-                    } else {
-                        console.log('image sent')
-                    }
-                })
+                const Pictures = new File({image});
+                Pictures.save()
+                console.log("file Uploaded!!!!")
+            
             }
         }
     })
 })
 
-
+// Home Page
 app.get('/', (req , res)=>{
     res.render('index');
 })
+
+// Get Uploaded file
 app.get('/upload', (req , res)=>{
     res.render('index');
 })
 
-app.listen(3000 , ()=>{
+app.listen(process.env.PORT , ()=>{
     console.log("server stated at port 3000");
 })
 
